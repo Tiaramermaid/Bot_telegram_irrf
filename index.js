@@ -106,7 +106,9 @@ bot.on("text", (ctx) => {
     else if (modoCalculo === "inss"){
         const salario = valores[0];
         const resultadoDescontoInss = calcularINSS(salario);
+        const salarioLiquido = calcularSalarioLiquido(salario);
         ctx.reply(`💼 INSS calculado: ${resultadoDescontoInss.toFixed(2)}`);
+        ctx.reply(`💰 Salário Líquido: ${salarioLiquido.toFixed(2)}`)
         ctx.reply("O INSS é descontado do salário bruto. O cálculo é progressivo, ou seja, é feito 'faixa por faixa' do salário, assim como o Imposto de Renda.");
     }
     else if (modoCalculo === "fgts"){
@@ -162,8 +164,14 @@ function calcularINSS(salario){
 
 //função de calculo FGTS 
 function calcularFGTS(salario){
-    const oliquota = 0.08; // 8%
-    const fgts = salario * oliquota;
+    const aliquota = 0.08; // 8%
+    const fgts = salario * aliquota;
     return fgts;
 }
 
+//Funçao de calcular o salario liquido
+function calcularSalarioLiquido(salario){
+    const descontoInss = calcularINSS(salario);
+
+    return salario - descontoInss;
+}
