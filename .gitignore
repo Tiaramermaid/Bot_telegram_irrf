@@ -27,3 +27,6 @@ pids
 # Sistema
 .DS_Store
 Thumbs.db
+package.json
+package-lock.json
+notes.md
