@@ -105,14 +105,15 @@ bot.on("text", (ctx) => {
     }
     else if (modoCalculo === "inss"){
         const salario = valores[0];
-        const resultado = calcularINSS(salario);
-        ctx.reply(`💼 INSS calculado: ${resultado.toFixed(2)}`);
+        const resultadoDescontoInss = calcularINSS(salario);
+        ctx.reply(`💼 INSS calculado: ${resultadoDescontoInss.toFixed(2)}`);
+        ctx.reply("O INSS é descontado do salário bruto. O cálculo é progressivo, ou seja, é feito 'faixa por faixa' do salário, assim como o Imposto de Renda.");
     }
     else if (modoCalculo === "fgts"){
         const salario = valores[0];
         const resultado = calcularFGTS(salario);
         ctx.reply(`🏦 FGTS calculado: ${resultado.toFixed(2)}`);
-        ctx.reply("O FGTS é um valor que não é descontado do seu salario mas que a empresa deposita mensalmente e  fica guradado na caixa economica como um seguro desemprego. é 8% do seu salario bruto")
+        ctx.reply("O FGTS é um valor que não é descontado do seu salario mas que a empresa deposita mensalmente e  fica guradado na caixa economica como um seguro desemprego. é 8% do seu salario bruto");
     }
     else{
         ctx.reply("ERRO. Escolha uma opção primeiro com /start");
@@ -121,17 +122,42 @@ bot.on("text", (ctx) => {
 
 //função de calculo IRRF Detalhado
 function calcularIRRF(salario, dependentes){
-    
+
 }
 
 //funçao de calculo INSS
 function calcularINSS(salario){
-    const desconto = 0;
+    const limiteFaixa1 = 1412.00;
+    const limiteFaixa2 = 2666.68;
+    const limiteFaixa3 = 4000.03;
+    const limiteFaixa4 = 7786.02;
 
-    //faixa 1
-    if (salario <= 1412.00){
+    let desconto = 0;
+
+    if (salario <= limiteFaixa1){
         desconto = salario * 0.075;
+    } else if (salario <= limiteFaixa2){
+        desconto = (limiteFaixa1 * 0.075) +
+        ((salario - limiteFaixa1) * 0.09);
+    } else if (salario <= limiteFaixa3){
+        desconto = (limiteFaixa1 * 0.075) + 
+        ((limiteFaixa2 - limiteFaixa1) * 0.09) + 
+        ((salario - limiteFaixa2)* 0.12);
+    } else if (salario <= limiteFaixa4){
+        desconto = (limiteFaixa1 * 0.075) + 
+        ((limiteFaixa2 - limiteFaixa1) * 0.09) +
+        ((limiteFaixa3-limiteFaixa2) * 0.12) + 
+        ((salario - limiteFaixa3) * 0.14);
+    } else {
+        //teto maximo
+        desconto = (limiteFaixa1 * 0.075) +
+        ((limiteFaixa2 - limiteFaixa1) * 0.09) +
+        ((limiteFaixa3 - limiteFaixa2) * 0.12) +
+        ((limiteFaixa4 - limiteFaixa3) * 0.14);
     }
+
+    return desconto;
+
 }
 
 //função de calculo FGTS 
