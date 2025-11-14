@@ -1,134 +1,198 @@
-//arquivo para fazer as configuraçoes do bot de imposto de renda
+// ================================================
+// ARQUIVO DE CONFIGURAÇÃO DO BOT DE IMPOSTO DE RENDA
+// ================================================
 
-//carrega as variaveis de ambiente do arquivo .env
+// Carrega variáveis do arquivo .env
 require('dotenv').config();
 
-//importa o modulo do telegraf
-const {Telegraf, Markup} = require('telegraf');
+// Importa Telegraf
+const { Telegraf, Markup } = require('telegraf');
 
-//Configuraçao e Inicialização 
-
+// Inicialização
 const token = process.env.BOT_TOKEN;
-
-//cria uma nova instancia do bot
 const timestamp = new Date().toISOString();
 
-if (!token){
-    console.error("ERRO: Token do bot não foi encontrado no arquivo .env.!");
+if (!token) {
+    console.error("ERRO: Token do bot não foi encontrado no arquivo .env!");
     process.exit(1);
 }
 
 const tokenDisplay = token.substring(0, 6) + '...';
-const sucessMessage = `[${timestamp}] INFO: INICIALIZAÇAO | MENSAGEM: token recebido com sucesso. Inicio: ${tokenDisplay} bot esta rodando🤖`;
-console.log(sucessMessage);
+console.log(`[${timestamp}] INFO: Token recebido com sucesso — Início: ${tokenDisplay} 🤖`);
 
 const bot = new Telegraf(token);
 
-//Função auxiliar para a criaçao de um log personalizado
-function logAcao(ctx, command, acao, isCommand = true){
+// ======================================================
+// FUNÇÃO AUXILIAR DE LOG
+// ======================================================
+function logAcao(ctx, command, acao, isCommand = true) {
     const message = ctx.message || ctx.update.message;
-
-    //coletar dados p ara o log
     const userId = ctx.from.id;
     const userName = ctx.from.username || 'N/A';
-    const firstName = ctx.from.firstName || 'N/A';
-    const chatType = ctx.chat.type; //ex.: 'private', 'group', 'channel'
+    const firstName = ctx.from.first_name || 'N/A';
+    const chatType = ctx.chat.type;
 
-    //define o comando/tipo de evento para o log
     const logCommand = isCommand ? command : 'TEXTO';
 
-    const logMessage = `[${new Date().toISOString()}] COMANDO:${logCommand} | TIPO:|${chatType} | USUARIO_ID:${userId} | USUARIO_NOME: @${userName} | NOME_COMPLETO:${firstName} | Ação:${acao}`;
+    const logMessage = `[${new Date().toISOString()}] COMANDO:${logCommand} | TIPO:${chatType} | USUARIO_ID:${userId} | USUARIO_NOME:@${userName} | FIRST_NAME:${firstName} | AÇÃO:${acao}`;
     console.log(logMessage);
 }
 
-//Comandos e Logica do Servidor
-
-//comando de inicio
-// bot.start((ctx) => {
-//     //mensagem de resposta do Bot
-//     let replyMsg = "Olá eu sou um bot de calculo de Imposto.\n"+
-//     "\nUse:" +
-//     "\n- /irrf" +
-//     "\n- /FGTS" +
-//     "\n- /INSS";
-
-//     ctx.reply(replyMsg); //envia mensagem
-
-//     //log do sistema
-//     logAcao(ctx, '/start', 'Mensagem de inicio enviada.');
-// });
-
+// ======================================================
+// MENU PRINCIPAL / START
+// ======================================================
 let modoCalculo = null;
 
 bot.start((ctx) => {
     ctx.reply(
-        "Olá!! Eu sou o bot de calculo de impostos CLT.",
+        "Olá!! Eu sou o bot de cálculo de impostos CLT. Escolha uma opção:",
         Markup.inlineKeyboard([
             [Markup.button.callback("💸 Calcular IRRF", "irrf")],
             [Markup.button.callback("💼 Calcular INSS", "inss")],
-            [Markup.button.callback("🏦 Calcular FGTS", "fgts")],
+            [Markup.button.callback("🏦 Calcular FGTS", "fgts")]
         ])
     );
-    //log ação
-    logAcao(ctx,'/start', 'mensagem de inicio enviada.');
+
+    logAcao(ctx, '/start', 'Mensagem inicial enviada.');
 });
 
-//açoes dos botoes
+// ======================================================
+// AÇÕES DOS BOTÕES
+// ======================================================
 bot.action("irrf", (ctx) => {
     modoCalculo = "irrf";
-    ctx.reply("📊 Vamos calcular o IRRF! Envie o valor do salário bruto e a quantidade de dependentes.\nExemplo: 3000 2");
-    logAcao(ctx, '/irrf', 'mensagem de calculo de irrf foi selecionada.');
+    ctx.reply("📊 Envie o salário bruto e o número de dependentes.\nExemplo: `3000 2`", { parse_mode: "Markdown" });
+    logAcao(ctx, 'irrf', 'Cálculo de IRRF selecionado.');
 });
+
 bot.action("inss", (ctx) => {
     modoCalculo = "inss";
-    ctx.reply("💼 Cálculo de INSS selecionado. Informe o valor do salário:");
-    logAcao(ctx, 'inss', 'mensagem de calculo do inss foi selecionada.');
+    ctx.reply("💼 Informe o valor do salário:");
+    logAcao(ctx, 'inss', 'Cálculo de INSS selecionado.');
 });
+
 bot.action("fgts", (ctx) => {
     modoCalculo = "fgts";
-    ctx.reply("🏦 Cálculo de FGTS selecionado. Digite o salário para continuar:");
-    logAcao(ctx, 'fgts', 'mensagem de calculo do inss foi selecionada.');
+    ctx.reply("🏦 Digite o salário para calcular o FGTS:");
+    logAcao(ctx, 'fgts', 'Cálculo de FGTS selecionado.');
 });
 
-bot.launch();
-
-//captura as mensagens de texto 
+// ======================================================
+// PROCESSA MENSAGENS DE TEXTO
+// ======================================================
 bot.on("text", (ctx) => {
     const texto = ctx.message.text;
     const valores = texto.split(" ").map(Number);
 
-    if(modoCalculo === "irrf"){
+    // ----------------------------- IRRF ---------------------------------
+    if (modoCalculo === "irrf") {
+
         const salario = valores[0];
         const dependentes = valores[1] || 0;
+
         const resultado = calcularIRRF(salario, dependentes);
-    ctx.reply(`💸 IRRF calculado: R$ ${resultado.toFixed(2)}`);
-    }
-    else if (modoCalculo === "inss"){
-        const salario = valores[0];
-        const resultadoDescontoInss = calcularINSS(salario);
         const salarioLiquido = calcularSalarioLiquido(salario);
-        ctx.reply(`💼 INSS calculado: ${resultadoDescontoInss.toFixed(2)}`);
-        ctx.reply(`💰 Salário Líquido: ${salarioLiquido.toFixed(2)}`)
-        ctx.reply("O INSS é descontado do salário bruto. O cálculo é progressivo, ou seja, é feito 'faixa por faixa' do salário, assim como o Imposto de Renda.");
+        const fgts = calcularFGTS(salario);
+        const inss = calcularINSS(salario);
+
+        const mensagem = `
+📊 *RESULTADO DO CÁLCULO CLT*
+--------------------------------------
+💰 *Salário bruto:* R$ ${salario.toFixed(2)}
+🏦 *FGTS (8%):* R$ ${fgts.toFixed(2)} _(depositado pela empresa)_
+
+👤 *Descontos do Funcionário*
+• INSS: R$ ${inss.toFixed(2)}
+• IRRF: R$ ${resultado.irrf.toFixed(2)}
+
+📘 *Detalhes do IRRF*
+• Base de Cálculo: R$ ${resultado.baseDeCalculo.toFixed(2)}
+• Dedução INSS: R$ ${inss.toFixed(2)}
+• Dedução Dependentes: R$ ${resultado.valorPorDependentes.toFixed(2)}
+• Alíquota: ${(resultado.aliquota * 100).toFixed(1)}%
+• Parcela a Deduzir: R$ ${resultado.deducao.toFixed(2)}
+
+🏁 *Resultado Final*
+✔ *Salário Líquido:* R$ ${salarioLiquido.toFixed(2)}
+`;
+
+        ctx.reply(mensagem, { parse_mode: "Markdown" });
+
+        ctx.reply(
+            "Escolha uma opção:",
+            Markup.inlineKeyboard([
+                [Markup.button.callback("🔄 Novo cálculo", "irrf")],
+                [Markup.button.callback("🏠 Voltar ao início", "start")]
+            ])
+        );
+
+        logAcao(ctx, "irrf", "Cálculo do IRRF realizado.");
     }
-    else if (modoCalculo === "fgts"){
+
+    // ----------------------------- INSS ---------------------------------
+    else if (modoCalculo === "inss") {
+        const salario = valores[0];
+        const desconto = calcularINSS(salario);
+        const liquido = calcularSalarioLiquido(salario);
+
+        ctx.reply(`💼 INSS calculado: R$ ${desconto.toFixed(2)}`);
+        ctx.reply(`💰 Salário Líquido: R$ ${liquido.toFixed(2)}`);
+        ctx.reply("O INSS é calculado de forma progressiva, faixa por faixa, assim como o IRRF.");
+
+        logAcao(ctx, "inss", "Cálculo do INSS realizado.");
+    }
+
+    // ----------------------------- FGTS ---------------------------------
+    else if (modoCalculo === "fgts") {
         const salario = valores[0];
         const resultado = calcularFGTS(salario);
-        ctx.reply(`🏦 FGTS calculado: ${resultado.toFixed(2)}`);
-        ctx.reply("O FGTS é um valor que não é descontado do seu salario mas que a empresa deposita mensalmente e  fica guradado na caixa economica como um seguro desemprego. é 8% do seu salario bruto");
+        ctx.reply(`🏦 FGTS calculado: R$ ${resultado.toFixed(2)}`);
+        ctx.reply("O FGTS é depositado pela empresa. É sempre 8% do salário bruto.");
+
+        logAcao(ctx, "fgts", "Cálculo do FGTS realizado.");
     }
-    else{
-        ctx.reply("ERRO. Escolha uma opção primeiro com /start");
+
+    // ----------------------------- ERRO ---------------------------------
+    else {
+        ctx.reply("⚠ Escolha uma opção primeiro usando /start");
     }
 });
 
-//função de calculo IRRF Detalhado
-function calcularIRRF(salario, dependentes){
+// ======================================================
+// FUNÇÕES DE CÁLCULO
+// ======================================================
+function calcularIRRF(salario, dependentes) {
+    const salarioLiquido = calcularSalarioLiquido(salario);
+    const valorPorDependentes = 189.59;
+    const deducaoDependentes = dependentes * valorPorDependentes;
 
+    const baseDeCalculo = salarioLiquido - deducaoDependentes;
+
+    let aliquota = 0;
+    let deducao = 0;
+
+    if (baseDeCalculo <= 1903.98) {
+        aliquota = 0;
+    } else if (baseDeCalculo <= 2826.65) {
+        aliquota = 0.075;
+        deducao = 142.80;
+    } else if (baseDeCalculo <= 3751.05) {
+        aliquota = 0.15;
+        deducao = 354.80;
+    } else if (baseDeCalculo <= 4664.68) {
+        aliquota = 0.225;
+        deducao = 636.13;
+    } else {
+        aliquota = 0.275;
+        deducao = 869.36;
+    }
+
+    const irrf = Math.max(0, baseDeCalculo * aliquota - deducao);
+
+    return { salario, dependentes, valorPorDependentes, baseDeCalculo, aliquota, deducao, irrf };
 }
 
-//funçao de calculo INSS
-function calcularINSS(salario){
+function calcularINSS(salario) {
     const limiteFaixa1 = 1412.00;
     const limiteFaixa2 = 2666.68;
     const limiteFaixa3 = 4000.03;
@@ -136,42 +200,46 @@ function calcularINSS(salario){
 
     let desconto = 0;
 
-    if (salario <= limiteFaixa1){
+    if (salario <= limiteFaixa1) {
         desconto = salario * 0.075;
-    } else if (salario <= limiteFaixa2){
-        desconto = (limiteFaixa1 * 0.075) +
-        ((salario - limiteFaixa1) * 0.09);
-    } else if (salario <= limiteFaixa3){
-        desconto = (limiteFaixa1 * 0.075) + 
-        ((limiteFaixa2 - limiteFaixa1) * 0.09) + 
-        ((salario - limiteFaixa2)* 0.12);
-    } else if (salario <= limiteFaixa4){
-        desconto = (limiteFaixa1 * 0.075) + 
-        ((limiteFaixa2 - limiteFaixa1) * 0.09) +
-        ((limiteFaixa3-limiteFaixa2) * 0.12) + 
-        ((salario - limiteFaixa3) * 0.14);
+    } else if (salario <= limiteFaixa2) {
+        desconto =
+            limiteFaixa1 * 0.075 +
+            (salario - limiteFaixa1) * 0.09;
+    } else if (salario <= limiteFaixa3) {
+        desconto =
+            limiteFaixa1 * 0.075 +
+            (limiteFaixa2 - limiteFaixa1) * 0.09 +
+            (salario - limiteFaixa2) * 0.12;
+    } else if (salario <= limiteFaixa4) {
+        desconto =
+            limiteFaixa1 * 0.075 +
+            (limiteFaixa2 - limiteFaixa1) * 0.09 +
+            (limiteFaixa3 - limiteFaixa2) * 0.12 +
+            (salario - limiteFaixa3) * 0.14;
     } else {
-        //teto maximo
-        desconto = (limiteFaixa1 * 0.075) +
-        ((limiteFaixa2 - limiteFaixa1) * 0.09) +
-        ((limiteFaixa3 - limiteFaixa2) * 0.12) +
-        ((limiteFaixa4 - limiteFaixa3) * 0.14);
+        // TETO DO INSS
+        desconto =
+            limiteFaixa1 * 0.075 +
+            (limiteFaixa2 - limiteFaixa1) * 0.09 +
+            (limiteFaixa3 - limiteFaixa2) * 0.12 +
+            (limiteFaixa4 - limiteFaixa3) * 0.14;
     }
 
     return desconto;
-
 }
 
-//função de calculo FGTS 
-function calcularFGTS(salario){
-    const aliquota = 0.08; // 8%
-    const fgts = salario * aliquota;
-    return fgts;
+function calcularFGTS(salario) {
+    return salario * 0.08;
 }
 
-//Funçao de calcular o salario liquido
-function calcularSalarioLiquido(salario){
-    const descontoInss = calcularINSS(salario);
-
-    return salario - descontoInss;
+function calcularSalarioLiquido(salario) {
+    return salario - calcularINSS(salario);
 }
+
+// ======================================================
+// INICIALIZA O BOT
+// ======================================================
+bot.launch();
+console.log("🤖 Bot iniciado com sucesso!");
+
