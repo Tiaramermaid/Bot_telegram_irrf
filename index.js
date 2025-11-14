@@ -121,8 +121,7 @@ bot.on("text", (ctx) => {
         ctx.reply(
             "Escolha uma opção:",
             Markup.inlineKeyboard([
-                [Markup.button.callback("🔄 Novo cálculo", "irrf")],
-                [Markup.button.callback("🏠 Voltar ao início", "start")]
+                [Markup.button.callback("🔄 Novo cálculo", "irrf")]
             ])
         );
 
